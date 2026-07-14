@@ -1,13 +1,11 @@
 import React, { useContext } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import PageShell from '../components/layout/PageShell';
-import Card from '../components/ui/Card';
-import Badge from '../components/ui/Badge';
-import Button from '../components/ui/Button';
 import { RsvpContext } from '../context/RsvpContext';
 import mockClubs from '../data/clubs.json';
 import mockSpeakers from '../data/speakers.json';
-import { ArrowLeft, Users, Calendar, ArrowRight, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Users, Calendar, ArrowRight, Activity } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const ClubProfile = () => {
   const { id } = useParams();
@@ -19,13 +17,14 @@ const ClubProfile = () => {
   if (!club) {
     return (
       <PageShell>
-        <div className="border-3 border-black bg-white p-12 text-center neo-shadow max-w-lg mx-auto select-none">
-          <h3 className="font-display font-black text-xl uppercase mb-2">Club Not Found</h3>
-          <p className="text-sm font-semibold text-black/60 mb-6">
-            The student organization you are looking for does not exist.
+        <div className="max-w-md mx-auto text-center mt-20">
+          <h3 className="font-display font-bold text-3xl text-text-primary mb-4">Club Not Found</h3>
+          <p className="text-text-secondary mb-8">
+            The student organization you are looking for does not exist or has been removed.
           </p>
-          <Link to="/clubs">
-            <Button variant="primary">Back to Club Directory</Button>
+          <Link to="/clubs" className="inline-flex items-center gap-2 bg-bg-surface border border-border-subtle px-6 py-3 rounded-full text-text-primary hover:text-accent transition-colors">
+            <ArrowLeft size={16} />
+            Back to Directory
           </Link>
         </div>
       </PageShell>
@@ -38,144 +37,144 @@ const ClubProfile = () => {
 
   return (
     <PageShell>
-      {/* Back Button */}
-      <div className="mb-6 flex">
+      <div className="mb-8">
         <Link
           to="/clubs"
-          className="flex items-center gap-1 text-xs font-black uppercase tracking-wider hover:text-accent-yellow transition-colors"
+          className="inline-flex items-center gap-2 text-sm text-text-tertiary hover:text-accent transition-colors"
         >
-          <ArrowLeft size={14} />
-          Back to Club Directory
+          <ArrowLeft size={16} />
+          Back to Directory
         </Link>
       </div>
 
-      {/* Profile Header Grid Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12 select-none">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
         {/* Banner with Logo */}
-        <div className={`lg:col-span-2 bg-gradient-to-br ${club.bgGrad} border-3 border-black p-8 flex flex-col sm:flex-row gap-6 items-center justify-start neo-shadow`}>
-          <div className="w-24 h-24 bg-white border-3 border-black flex items-center justify-center font-display font-black text-4xl shadow-[3px_3px_0px_0px_#000]">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`lg:col-span-2 rounded-3xl overflow-hidden bg-gradient-to-br ${club.bgGrad} relative p-10 md:p-12 flex flex-col md:flex-row items-center md:items-end gap-8`}
+        >
+          <div className="absolute inset-0 bg-black/60"></div>
+          
+          <div className="relative z-10 w-32 h-32 bg-bg-primary rounded-full flex items-center justify-center font-display font-bold text-4xl text-text-primary border-4 border-bg-primary shadow-2xl">
             {club.logo}
           </div>
-          <div className="space-y-2 text-center sm:text-left">
-            <div className="flex justify-center sm:justify-start gap-2">
-              <Badge variant="dark">Chartered Club</Badge>
-              <Badge variant="white">Active</Badge>
+          
+          <div className="relative z-10 text-center md:text-left">
+            <div className="flex justify-center md:justify-start gap-3 mb-4">
+              <span className="px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs uppercase tracking-wider font-medium">Chartered</span>
+              <span className="px-3 py-1 rounded-full bg-accent/20 border border-accent/30 text-accent text-xs uppercase tracking-wider font-medium">Active</span>
             </div>
-            <h1 className="font-display font-black text-3xl sm:text-4xl md:text-5xl uppercase tracking-tight text-black leading-none">
+            <h1 className="font-display font-bold text-4xl md:text-5xl text-white tracking-tight">
               {club.name}
             </h1>
           </div>
-        </div>
+        </motion.div>
 
         {/* Club Statistics Card */}
-        <Card variant="yellow" shadowSize="medium" className="p-6 space-y-4">
-          <h3 className="font-display font-black text-sm uppercase tracking-wider text-black/50 border-b border-black/10 pb-2">
-            Club Registry Stats
-          </h3>
-          <div className="space-y-4 font-display font-bold text-xs uppercase tracking-wider text-black/85">
-            <div className="flex justify-between">
-              <span>Council</span>
-              <span className="text-black font-black">Science Council</span>
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="bg-bg-surface border border-border-subtle rounded-3xl p-8 flex flex-col justify-center"
+        >
+          <div className="flex items-center gap-2 mb-6">
+            <Activity className="w-5 h-5 text-accent" />
+            <h3 className="font-medium text-text-secondary uppercase tracking-widest text-xs">At a Glance</h3>
+          </div>
+          
+          <div className="space-y-6">
+            <div>
+              <p className="text-text-tertiary text-sm mb-1">Members</p>
+              <p className="text-2xl font-display font-bold text-text-primary">{club.memberIds.length}</p>
             </div>
-            <div className="flex justify-between">
-              <span>Members</span>
-              <span className="text-black font-black">{club.memberIds.length} active</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Hosted Events</span>
-              <span className="text-black font-black">{hostedEvents.length} total</span>
+            <div className="border-t border-border-subtle pt-4">
+              <p className="text-text-tertiary text-sm mb-1">Hosted Events</p>
+              <p className="text-2xl font-display font-bold text-text-primary">{hostedEvents.length}</p>
             </div>
           </div>
-        </Card>
+        </motion.div>
       </div>
 
-      {/* Main Content Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 select-none">
-        
-        {/* Left 2 Columns: Description & Member List */}
-        <div className="lg:col-span-2 space-y-8">
-          
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+        <div className="lg:col-span-2 space-y-12">
           {/* About Club */}
-          <Card variant="white" shadowSize="medium" className="p-6 md:p-8 space-y-4">
-            <h2 className="font-display font-black text-xl uppercase border-b-2 border-black pb-2">
-              About Our Club
-            </h2>
-            <p className="text-sm font-semibold leading-relaxed text-black/85">
+          <section>
+            <div className="flex items-center gap-2 mb-6">
+              <span className="text-accent font-bold text-xs uppercase tracking-widest">01</span>
+              <h2 className="font-display font-bold text-2xl text-text-primary">About Our Club</h2>
+            </div>
+            <p className="text-text-secondary leading-relaxed text-lg">
               {club.description}
             </p>
-          </Card>
+          </section>
 
-          {/* Members Showcase Directory */}
-          <div className="space-y-4">
-            <h2 className="font-display font-black text-xl uppercase text-left">
-              Executive Committee
-            </h2>
+          {/* Members Showcase */}
+          <section>
+            <div className="flex items-center gap-2 mb-6">
+              <span className="text-accent font-bold text-xs uppercase tracking-widest">02</span>
+              <h2 className="font-display font-bold text-2xl text-text-primary">Executive Committee</h2>
+            </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {members.map((member) => (
-                <Card key={member.id} variant="white" shadowSize="small" className="p-4 flex items-center gap-4">
+                <div key={member.id} className="bg-bg-surface border border-border-subtle rounded-2xl p-4 flex items-center gap-4">
                   <div
-                    className="w-12 h-12 border-2 border-black flex items-center justify-center font-display font-black text-sm shrink-0"
-                    style={{ backgroundColor: member.avatarColor }}
+                    className="w-14 h-14 rounded-full flex items-center justify-center font-display font-bold text-lg"
+                    style={{ backgroundColor: member.avatarColor, color: '#fff' }}
                   >
                     {member.avatarText}
                   </div>
                   <div>
-                    <h3 className="font-display font-black text-sm uppercase leading-tight">
+                    <h3 className="font-display font-bold text-text-primary text-lg">
                       {member.name}
                     </h3>
-                    <span className="text-xs font-semibold text-black/60 uppercase">
+                    <span className="text-text-tertiary text-sm">
                       {member.role}
                     </span>
                   </div>
-                </Card>
+                </div>
               ))}
             </div>
-          </div>
+          </section>
         </div>
 
-        {/* Right 1 Column: Hosted Events List */}
+        {/* Right 1 Column: Hosted Events */}
         <div className="space-y-6">
-          <h2 className="font-display font-black text-xl uppercase text-left">
-            Upcoming Events
-          </h2>
+          <div className="flex items-center gap-2 mb-6">
+            <span className="text-accent font-bold text-xs uppercase tracking-widest">03</span>
+            <h2 className="font-display font-bold text-2xl text-text-primary">Upcoming Events</h2>
+          </div>
 
           {hostedEvents.length > 0 ? (
             <div className="space-y-4">
               {hostedEvents.map((evt) => (
-                <Card
+                <div
                   key={evt.id}
                   onClick={() => navigate(`/event/${evt.id}`)}
-                  variant="white"
-                  shadowSize="medium"
-                  className="p-4 cursor-pointer hover:border-accent-yellow flex flex-col justify-between space-y-4"
+                  className="bg-bg-surface border border-border-subtle rounded-2xl p-5 cursor-pointer hover:border-accent transition-colors group"
                 >
-                  <div>
-                    <div className="flex items-center gap-2 text-xxs font-bold uppercase tracking-wider text-black/50 mb-1">
-                      <span>{evt.date}</span>
-                      <span>•</span>
-                      <span>{evt.category}</span>
-                    </div>
-                    <h3 className="font-display font-black text-sm uppercase leading-snug line-clamp-2">
-                      {evt.title}
-                    </h3>
+                  <div className="flex items-center gap-2 text-xs font-medium text-text-tertiary mb-3">
+                    <Calendar className="w-4 h-4" />
+                    <span>{evt.date}</span>
                   </div>
-
-                  <div className="border-t border-black/10 pt-3 flex items-center justify-between text-xxs font-bold uppercase tracking-wider text-black/70 mt-auto">
-                    <span>{evt.seatsAvailable} seats left</span>
-                    <span className="flex items-center text-accent-yellow font-black">
-                      <span>Details</span>
-                      <ArrowRight size={10} />
+                  <h3 className="font-display font-bold text-lg text-text-primary mb-6 group-hover:text-accent transition-colors">
+                    {evt.title}
+                  </h3>
+                  
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-text-secondary">{evt.seatsAvailable} seats left</span>
+                    <span className="text-accent font-medium flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      Details <ArrowRight size={14} />
                     </span>
                   </div>
-                </Card>
+                </div>
               ))}
             </div>
           ) : (
-            <Card variant="white" shadowSize="small" className="p-6 text-center text-black/50">
-              <Calendar className="w-8 h-8 mx-auto mb-2 text-black/35" />
-              <p className="text-xs font-bold uppercase tracking-wider">No Hosted Events Configured</p>
-            </Card>
+            <div className="bg-bg-surface border border-border-subtle border-dashed rounded-2xl p-8 text-center">
+              <Calendar className="w-10 h-10 mx-auto mb-4 text-text-tertiary" />
+              <p className="text-text-secondary text-sm">No upcoming events scheduled.</p>
+            </div>
           )}
         </div>
       </div>

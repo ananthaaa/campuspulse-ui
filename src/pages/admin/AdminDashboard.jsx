@@ -8,7 +8,7 @@ import { RsvpContext } from '../../context/RsvpContext';
 import { Calendar, Users, Eye, Plus, ArrowUpRight, Navigation, Trash2 } from 'lucide-react';
 
 const AdminDashboard = () => {
-  const { events, clearAllLocalData } = useContext(RsvpContext);
+  const { events, deleteEvent, clearAllLocalData } = useContext(RsvpContext);
   const navigate = useNavigate();
 
   // Compute metrics
@@ -119,12 +119,20 @@ const AdminDashboard = () => {
                   <td className="py-4 px-6 text-center font-mono text-red-500 font-black">{evt.waitlistCount}</td>
                   <td className="py-4 px-6 text-right space-x-2">
                     <button
-                      onClick={() => navigate(`/event/${evt.id}`)}
+                      onClick={() => navigate(`/student/events/${evt.id}`)}
                       className="p-2 border-2 border-black hover:bg-pastel-mint transition-all neo-shadow-sm active:translate-y-[1px] active:neo-shadow-sm inline-flex items-center gap-1"
                       title="View Public Screen"
                     >
                       <Eye size={12} />
                       View
+                    </button>
+                    <button
+                      onClick={() => navigate(`/admin/event/${evt.id}/roster`)}
+                      className="p-2 border-2 border-black bg-pastel-blue hover:bg-accent-blue hover:text-white transition-all neo-shadow-sm active:translate-y-[1px] active:neo-shadow-sm inline-flex items-center gap-1"
+                      title="Manage Roster"
+                    >
+                      <Users size={12} />
+                      Roster
                     </button>
                     <button
                       onClick={() => navigate(`/admin/venue-upload?eventId=${evt.id}`)}
@@ -133,6 +141,18 @@ const AdminDashboard = () => {
                     >
                       <Navigation size={12} />
                       Waypoints
+                    </button>
+                    <button
+                      onClick={() => {
+                        if(window.confirm('Are you sure you want to delete this event?')) {
+                          deleteEvent(evt.id);
+                        }
+                      }}
+                      className="p-2 border-2 border-black bg-red-100 hover:bg-red-500 hover:text-white transition-all neo-shadow-sm active:translate-y-[1px] active:neo-shadow-sm inline-flex items-center gap-1"
+                      title="Delete Event"
+                    >
+                      <Trash2 size={12} />
+                      Delete
                     </button>
                   </td>
                 </tr>

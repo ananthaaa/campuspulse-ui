@@ -170,7 +170,7 @@ const EventDiscovery = () => {
           {filteredEvents.map((evt) => (
             <Card
               key={evt.id}
-              onClick={() => navigate(`/event/${evt.id}`)}
+              onClick={() => navigate(`/student/events/${evt.id}`)}
               variant="white"
               shadowSize="medium"
               className="flex flex-col h-full cursor-pointer"

@@ -90,13 +90,13 @@ const Footer = () => {
       {/* Giant Wordmark */}
       <div className="max-w-6xl mx-auto px-4 md:px-8 overflow-hidden select-none pointer-events-none opacity-5 border-t border-white/10 pt-4">
         <h1 className="font-display font-black text-center text-[7vw] tracking-tighter uppercase whitespace-nowrap leading-none">
-          CAMPUSPULSE
+          EVENTTRAIL
         </h1>
       </div>
 
       {/* Copyright */}
       <div className="border-t border-white/10 bg-neutral-950/80 py-6 text-center text-xs font-semibold text-white/40 tracking-wider">
-        &copy; {new Date().getFullYear()} CAMPUSPULSE. BUILT IN DIDASKO ESTHETIC. ALL RIGHTS RESERVED.
+        &copy; {new Date().getFullYear()} EVENTTRAIL. BUILT IN DIDASKO ESTHETIC. ALL RIGHTS RESERVED.
       </div>
     </footer>
   );

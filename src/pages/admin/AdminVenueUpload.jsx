@@ -1,12 +1,30 @@
 import React, { useState, useContext, useMemo } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import PageShell from '../../components/layout/PageShell';
-import Card from '../../components/ui/Card';
-import Badge from '../../components/ui/Badge';
-import Button from '../../components/ui/Button';
 import { RsvpContext } from '../../context/RsvpContext';
 import mockVenues from '../../data/venues.json';
-import { ArrowLeft, Upload, Plus, Trash2, Save, MapPin } from 'lucide-react';
+import ImageUploadZone from '../../components/ui/ImageUploadZone';
+import { ArrowLeft, Plus, Trash2, Save, MapPin, X } from 'lucide-react';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+
+// Fix Leaflet's default icon path issues
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
+
+function LocationPicker({ position, setPosition }) {
+  useMapEvents({
+    click(e) {
+      setPosition(e.latlng);
+    },
+  });
+  return position ? <Marker position={position} draggable={true} eventHandlers={{ dragend: (e) => setPosition(e.target.getLatLng()) }} /> : null;
+}
 
 const AdminVenueUpload = () => {
   const navigate = useNavigate();
@@ -20,26 +38,43 @@ const AdminVenueUpload = () => {
     return events.find((e) => e.id === selectedEventId);
   }, [events, selectedEventId]);
 
-  // Find initial venue waypoints
   const initialVenue = useMemo(() => {
     if (!selectedEvent) return null;
     return mockVenues.find((v) => v.id === selectedEvent.venueId) || mockVenues[0];
   }, [selectedEvent]);
 
-  // Editor states
   const [waypoints, setWaypoints] = useState(() => {
     return initialVenue ? initialVenue.waypoints : [];
   });
-
   const [building, setBuilding] = useState(() => {
     return initialVenue ? initialVenue.building : 'Science Building Block B';
   });
 
-  // SVG Mock Upload preview state
-  const [isUploaded, setIsUploaded] = useState(true);
-  const [fileName, setFileName] = useState('floorplan_sci_lvl2.svg');
+  const [mapPosition, setMapPosition] = useState({ lat: 10.026100, lng: 76.308300 });
+  const [indoorSteps, setIndoorSteps] = useState([
+    'Enter main entrance',
+    'Turn left at reception desk',
+    'Take the staircase on the right to Floor 2',
+    'Walk to the end of the corridor',
+    'Room 204 is the third door on the right'
+  ]);
 
-  // New Waypoint state
+  const handleAddIndoorStep = () => {
+    setIndoorSteps((prev) => [...prev, '']);
+  };
+
+  const handleRemoveIndoorStep = (idx) => {
+    setIndoorSteps((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const handleIndoorStepChange = (idx, value) => {
+    setIndoorSteps((prev) =>
+      prev.map((step, i) => (i === idx ? value : step))
+    );
+  };
+
+  const [svgUrl, setSvgUrl] = useState('');
+
   const [newInstruction, setNewInstruction] = useState('');
   const [newDetails, setNewDetails] = useState('');
   const [newX, setNewX] = useState(150);
@@ -83,252 +118,237 @@ const AdminVenueUpload = () => {
     );
   };
 
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setFileName(file.name);
-      setIsUploaded(true);
-    }
-  };
-
   const handleSaveConfiguration = (e) => {
     e.preventDefault();
-    // Update local state / notify user
     alert(`Configuration saved for venue: ${initialVenue?.name || 'Default'}. Waypoints updated in-memory.`);
     navigate('/admin');
   };
 
   return (
     <PageShell>
-      {/* Back Button */}
       <div className="mb-6 flex">
         <Link
           to="/admin"
-          className="flex items-center gap-1 text-xs font-black uppercase tracking-wider hover:text-accent-yellow transition-colors"
+          className="inline-flex items-center gap-2 text-sm text-text-tertiary hover:text-accent transition-colors"
         >
-          <ArrowLeft size={14} />
+          <ArrowLeft size={16} />
           Back to Dashboard
         </Link>
       </div>
 
-      {/* Title Header */}
-      <div className="mb-8 text-left border-b-3 border-black pb-4 select-none">
-        <Badge variant="accent" className="mb-2">Admin Workspace</Badge>
-        <h1 className="font-display font-black text-3xl md:text-4xl uppercase tracking-tight">
-          Configure Waypoints & Floor Plan
+      <div className="mb-12">
+        <h1 className="font-display font-bold text-4xl text-text-primary tracking-tight mb-2">
+          Venue Setup
         </h1>
+        <p className="text-text-secondary">Configure floor plans and navigation waypoints.</p>
       </div>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 text-left select-none">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* Left 2 Columns: Map preview & Upload */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Target selector */}
-          <Card variant="white" shadowSize="small" className="p-4 flex flex-col md:flex-row md:items-center gap-4">
+        <div className="lg:col-span-2 space-y-8">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-bg-surface border border-border-subtle rounded-3xl p-6 md:p-8 flex flex-col md:flex-row md:items-center gap-6"
+          >
             <div className="grow">
-              <label className="block text-xxs font-black uppercase tracking-wider text-black/50 mb-1">
-                Configure Venue for Event:
-              </label>
+              <label className="block text-sm font-medium text-text-primary mb-2">Target Event:</label>
               <select
                 value={selectedEventId}
                 onChange={handleEventChange}
-                className="w-full bg-white text-black border-2 border-black py-2 px-3 font-display font-bold text-xs uppercase tracking-wider outline-none neo-shadow-sm"
+                className="w-full bg-bg-primary border border-border-subtle rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-accent transition-colors"
               >
                 {events.map((evt) => (
-                  <option key={evt.id} value={evt.id}>
-                    {evt.title} ({evt.faculty})
-                  </option>
+                  <option key={evt.id} value={evt.id}>{evt.title}</option>
                 ))}
               </select>
             </div>
             
             <div className="w-full md:w-1/3">
-              <label className="block text-xxs font-black uppercase tracking-wider text-black/50 mb-1">
-                Target Building:
-              </label>
+              <label className="block text-sm font-medium text-text-primary mb-2">Building:</label>
               <input
                 type="text"
                 value={building}
                 onChange={(e) => setBuilding(e.target.value)}
-                className="w-full bg-white text-black border-2 border-black py-2 px-3 font-display font-bold text-xs uppercase tracking-wider outline-none"
+                className="w-full bg-bg-primary border border-border-subtle rounded-xl px-4 py-3 text-text-primary focus:outline-none focus:border-accent transition-colors"
               />
             </div>
-          </Card>
+          </motion.div>
 
-          {/* SVG Map Canvas Upload */}
-          <Card variant="white" shadowSize="medium" className="p-6 space-y-6">
-            <h2 className="font-display font-black text-lg uppercase">
-              1. Floor Plan Vector Upload (SVG Only)
-            </h2>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-bg-surface border border-border-subtle rounded-3xl p-6 md:p-8 space-y-6"
+          >
+            <h2 className="font-display font-bold text-2xl text-text-primary">1. Map & Indoor Directions</h2>
 
-            {isUploaded ? (
-              <div className="border-3 border-black p-4 bg-pastel-mint/20 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white border-2 border-black flex items-center justify-center font-display font-black text-xs">
-                    SVG
-                  </div>
-                  <div>
-                    <span className="font-display font-black text-xs uppercase block">{fileName}</span>
-                    <span className="text-xxs font-bold text-black/60 uppercase">Vector map loaded successfully</span>
-                  </div>
+            <div className="bg-bg-primary border border-border-subtle rounded-xl overflow-hidden mb-6">
+              <div className="p-4 border-b border-border-subtle flex justify-between items-center bg-bg-surface">
+                <span className="font-medium text-text-primary flex items-center gap-2">
+                  <MapPin size={18} className="text-accent" />
+                  Building Entrance Pin
+                </span>
+                <span className="text-sm text-text-secondary font-mono">
+                  {mapPosition.lat.toFixed(6)}, {mapPosition.lng.toFixed(6)}
+                </span>
+              </div>
+              <div className="h-80 w-full relative z-0">
+                <MapContainer center={[mapPosition.lat, mapPosition.lng]} zoom={16} scrollWheelZoom={false} style={{ height: '100%', width: '100%', zIndex: 0 }}>
+                  <TileLayer
+                    attribution='&copy; OpenStreetMap'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  <LocationPicker position={mapPosition} setPosition={setMapPosition} />
+                </MapContainer>
+              </div>
+              <div className="p-4 text-sm text-text-secondary">
+                Click anywhere on the map to set the entrance marker. Drag the marker to fine-tune its position.
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-border-subtle">
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm font-medium text-text-primary">Indoor Directions</label>
+                <button
+                  type="button"
+                  onClick={handleAddIndoorStep}
+                  className="flex items-center gap-1 text-sm font-medium bg-bg-surface-alt border border-border-subtle hover:border-accent text-text-primary px-3 py-1.5 rounded-full transition-colors"
+                >
+                  <Plus size={14} /> Add Step
+                </button>
+              </div>
+
+              {indoorSteps.map((step, idx) => (
+                <div key={idx} className="flex gap-4 items-center bg-bg-primary border border-border-subtle p-3 rounded-xl">
+                  <span className="font-bold text-text-tertiary w-6 text-right">{idx + 1}.</span>
+                  <input
+                    type="text"
+                    value={step}
+                    onChange={(e) => handleIndoorStepChange(idx, e.target.value)}
+                    placeholder="Describe the step..."
+                    className="grow bg-transparent border-none text-sm text-text-primary focus:outline-none"
+                  />
+                  {indoorSteps.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveIndoorStep(idx)}
+                      className="text-text-tertiary hover:text-red-500 transition-colors p-1"
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
                 </div>
-                
-                <label className="py-1.5 px-3 bg-white border-2 border-black font-display font-bold text-xs uppercase cursor-pointer hover:bg-black hover:text-white transition-colors">
-                  Change File
-                  <input type="file" accept=".svg" onChange={handleFileUpload} className="hidden" />
-                </label>
-              </div>
-            ) : (
-              <div className="border-3 border-dashed border-black/40 p-8 text-center bg-black/5 hover:bg-black/10 transition-colors">
-                <Upload className="w-10 h-10 text-black/40 mx-auto mb-3" />
-                <span className="font-display font-black text-sm uppercase block mb-1">Upload Venue Floor Plan</span>
-                <span className="text-xxs font-bold text-black/60 uppercase block mb-4">SVG format only, max size 1MB</span>
-                <label className="py-2 px-4 bg-black text-white font-display font-bold text-xs uppercase cursor-pointer hover:bg-accent-yellow hover:text-black transition-colors shadow-[2px_2px_0px_0px_#000]">
-                  Select File
-                  <input type="file" accept=".svg" onChange={handleFileUpload} className="hidden" />
-                </label>
-              </div>
-            )}
+              ))}
+            </div>
+          </motion.div>
 
-            {/* SVG Interactive coordinates grid preview */}
-            <div className="border-2 border-black aspect-[4/3] w-full max-w-md mx-auto bg-[#FCFAF7] relative overflow-hidden flex items-center justify-center">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-bg-surface border border-border-subtle rounded-3xl p-6 md:p-8 space-y-6"
+          >
+            <h2 className="font-display font-bold text-2xl text-text-primary">2. Floor Plan SVG Upload</h2>
+            <ImageUploadZone 
+              onUpload={setSvgUrl} 
+              previewUrl={svgUrl} 
+              onClear={() => setSvgUrl('')} 
+            />
+
+            <div className="border border-border-subtle aspect-[4/3] w-full max-w-xl mx-auto bg-bg-primary relative rounded-xl overflow-hidden flex items-center justify-center">
               <svg className="w-full h-full" viewBox="0 0 500 350">
-                {/* Dotted helper lines grid */}
                 {[...Array(7)].map((_, i) => (
-                  <line key={i} x1={(i + 1) * 60} y1="0" x2={(i + 1) * 60} y2="350" stroke="#000" strokeWidth="0.5" strokeDasharray="2,2" opacity="0.1" />
+                  <line key={i} x1={(i + 1) * 60} y1="0" x2={(i + 1) * 60} y2="350" stroke="#333" strokeWidth="1" strokeDasharray="4,4" opacity="0.3" />
                 ))}
                 {[...Array(5)].map((_, i) => (
-                  <line key={i} x1="0" y1={(i + 1) * 60} x2="500" y2={(i + 1) * 60} stroke="#000" strokeWidth="0.5" strokeDasharray="2,2" opacity="0.1" />
+                  <line key={`y-${i}`} x1="0" y1={(i + 1) * 60} x2="500" y2={(i + 1) * 60} stroke="#333" strokeWidth="1" strokeDasharray="4,4" opacity="0.3" />
                 ))}
+                <rect x="15" y="15" width="470" height="320" fill="none" stroke="#444" strokeWidth="2" />
+                <rect x="50" y="50" width="100" height="250" fill="#222" stroke="#333" strokeWidth="1" />
+                <rect x="150" y="50" width="200" height="100" fill="#222" stroke="#333" strokeWidth="1" />
+                <rect x="350" y="50" width="100" height="250" fill="#222" stroke="#333" strokeWidth="1" />
 
-                {/* Outer borders */}
-                <rect x="15" y="15" width="470" height="320" fill="none" stroke="#000" strokeWidth="3" />
-                
-                {/* Corridors */}
-                <rect x="50" y="50" width="100" height="250" fill="#EAE5E0" stroke="#000" strokeWidth="2" opacity="0.7" />
-                <rect x="150" y="50" width="200" height="100" fill="#EAE5E0" stroke="#000" strokeWidth="2" opacity="0.7" />
-                <rect x="350" y="50" width="100" height="250" fill="#EAE5E0" stroke="#000" strokeWidth="2" opacity="0.7" />
-
-                {/* Connect lines */}
                 {waypoints.length > 1 && (
                   <path
                     d={waypoints.map((wp, i) => `${i === 0 ? 'M' : 'L'} ${wp.x} ${wp.y}`).join(' ')}
                     fill="none"
                     stroke="#FF5A1F"
-                    strokeWidth="3"
-                    strokeDasharray="4,4"
+                    strokeWidth="4"
+                    strokeDasharray="8,8"
                   />
                 )}
 
-                {/* Render nodes */}
                 {waypoints.map((wp) => (
                   <g key={wp.step}>
-                    <circle cx={wp.x} cy={wp.y} r="8" fill="#FFDB58" stroke="#000" strokeWidth="2" />
-                    <text x={wp.x} y={wp.y + 3} fontSize="9" fontWeight="black" fontFamily="Epilogue" fill="#000" textAnchor="middle">{wp.step}</text>
+                    <circle cx={wp.x} cy={wp.y} r="12" fill="#FF5A1F" stroke="#0B0B0C" strokeWidth="3" />
+                    <text x={wp.x} y={wp.y + 4} fontSize="10" fontWeight="bold" fontFamily="Inter, sans-serif" fill="#fff" textAnchor="middle">{wp.step}</text>
                   </g>
                 ))}
               </svg>
             </div>
-          </Card>
+          </motion.div>
         </div>
 
-        {/* Right 1 Column: Waypoint list editor */}
         <div className="space-y-6">
-          <Card variant="white" shadowSize="medium" className="p-6 space-y-6">
-            <h2 className="font-display font-black text-lg uppercase border-b border-black/10 pb-2">
-              2. Waypoint Steps
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-bg-surface border border-border-subtle rounded-3xl p-6 md:p-8 space-y-6 sticky top-24"
+          >
+            <h2 className="font-display font-bold text-xl text-text-primary border-b border-border-subtle pb-4">
+              3. Waypoints
             </h2>
 
-            {/* List */}
-            <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
               {waypoints.map((wp) => (
-                <div key={wp.step} className="flex justify-between items-center border-2 border-black p-3 bg-black/5 font-display font-bold text-xxs uppercase tracking-wider text-black/80">
-                  <div className="grow space-y-1">
-                    <span className="font-black text-xs text-black block leading-none">
-                      Step {wp.step}: {wp.instruction}
+                <div key={wp.step} className="flex justify-between items-center border border-border-subtle rounded-xl p-4 bg-bg-primary">
+                  <div>
+                    <span className="font-medium text-text-primary block mb-1">
+                      {wp.step}. {wp.instruction}
                     </span>
-                    <span className="text-black/50 block">Coords: {wp.x}px X, {wp.y}px Y</span>
+                    <span className="text-text-tertiary text-xs block">X: {wp.x}, Y: {wp.y}</span>
                   </div>
-                  <button
-                    onClick={() => handleDeleteWaypoint(wp.step)}
-                    className="text-black/60 hover:text-red-500 ml-2"
-                  >
-                    <Trash2 size={14} />
+                  <button onClick={() => handleDeleteWaypoint(wp.step)} className="text-text-tertiary hover:text-red-500 transition-colors p-2">
+                    <Trash2 size={16} />
                   </button>
                 </div>
               ))}
+              {waypoints.length === 0 && (
+                <div className="text-center p-6 border border-border-subtle border-dashed rounded-xl text-text-tertiary">
+                  No waypoints configured.
+                </div>
+              )}
             </div>
 
-            {/* Add waypoint form */}
-            <div className="border-t border-black/10 pt-4 space-y-3">
-              <span className="block text-xs font-black uppercase tracking-wider text-black/50">
-                Add Waypoint Step
-              </span>
+            <div className="border-t border-border-subtle pt-6 space-y-4">
+              <label className="block text-sm font-medium text-text-primary">Add New Waypoint</label>
               
-              <input
-                type="text"
-                value={newInstruction}
-                onChange={(e) => setNewInstruction(e.target.value)}
-                placeholder="Step instruction (e.g. Turn left)"
-                className="w-full bg-white text-black border-2 border-black p-2 font-display text-xxs font-bold uppercase outline-none"
-              />
-              <input
-                type="text"
-                value={newDetails}
-                onChange={(e) => setNewDetails(e.target.value)}
-                placeholder="Details (e.g. Near main board)"
-                className="w-full bg-white text-black border-2 border-black p-2 font-display text-xxs font-bold uppercase outline-none"
-              />
+              <input type="text" value={newInstruction} onChange={(e) => setNewInstruction(e.target.value)} placeholder="Instruction (e.g. Turn right)" className="w-full bg-bg-primary border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors" />
+              <input type="text" value={newDetails} onChange={(e) => setNewDetails(e.target.value)} placeholder="Details (e.g. Near elevators)" className="w-full bg-bg-primary border border-border-subtle rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-colors" />
               
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[10px] font-black uppercase text-black/50 block mb-1">X Coord (px)</label>
-                  <input
-                    type="number"
-                    value={newX}
-                    onChange={(e) => setNewX(e.target.value)}
-                    className="w-full bg-white text-black border-2 border-black p-1.5 font-mono text-xxs font-bold outline-none"
-                    min="20"
-                    max="480"
-                  />
+                  <label className="block text-xs font-medium text-text-secondary mb-1">X Coord (px)</label>
+                  <input type="number" value={newX} onChange={(e) => setNewX(e.target.value)} className="w-full bg-bg-primary border border-border-subtle rounded-lg px-3 py-2 text-sm text-text-primary font-mono focus:outline-none focus:border-accent" min="20" max="480" />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black uppercase text-black/50 block mb-1">Y Coord (px)</label>
-                  <input
-                    type="number"
-                    value={newY}
-                    onChange={(e) => setNewY(e.target.value)}
-                    className="w-full bg-white text-black border-2 border-black p-1.5 font-mono text-xxs font-bold outline-none"
-                    min="20"
-                    max="330"
-                  />
+                  <label className="block text-xs font-medium text-text-secondary mb-1">Y Coord (px)</label>
+                  <input type="number" value={newY} onChange={(e) => setNewY(e.target.value)} className="w-full bg-bg-primary border border-border-subtle rounded-lg px-3 py-2 text-sm text-text-primary font-mono focus:outline-none focus:border-accent" min="20" max="330" />
                 </div>
               </div>
 
-              <Button
-                onClick={handleAddWaypoint}
-                variant="accent"
-                className="w-full py-2 text-xxs"
-              >
-                <Plus size={12} />
-                Add Waypoint Step
-              </Button>
+              <button onClick={handleAddWaypoint} className="w-full bg-bg-surface-alt hover:bg-bg-primary border border-border-subtle hover:border-accent text-text-primary font-medium py-3 rounded-xl flex items-center justify-center gap-2 transition-colors mt-2">
+                <Plus size={16} /> Add Waypoint
+              </button>
             </div>
 
-            {/* Save Button */}
-            <div className="border-t border-black/10 pt-4">
-              <Button
-                onClick={handleSaveConfiguration}
-                variant="primary"
-                className="w-full"
-              >
-                <Save size={14} />
-                Save Venue Waypoints
-              </Button>
+            <div className="border-t border-border-subtle pt-6">
+              <button onClick={handleSaveConfiguration} className="w-full bg-accent hover:bg-accent-hover text-accent-contrast font-medium py-4 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-lg shadow-accent/20">
+                <Save size={18} /> Save Setup
+              </button>
             </div>
-
-          </Card>
+          </motion.div>
         </div>
       </div>
     </PageShell>

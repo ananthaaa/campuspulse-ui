@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect } from 'react';
 import initialEvents from '../data/events.json';
+import initialVenues from '../data/venues.json';
 
 export const RsvpContext = createContext();
 
@@ -7,6 +8,11 @@ export const RsvpProvider = ({ children }) => {
   const [events, setEvents] = useState(() => {
     const saved = localStorage.getItem('cp_events');
     return saved ? JSON.parse(saved) : initialEvents;
+  });
+
+  const [venues, setVenues] = useState(() => {
+    const saved = localStorage.getItem('cp_venues');
+    return saved ? JSON.parse(saved) : initialVenues;
   });
 
   const [userRsvps, setUserRsvps] = useState(() => {
@@ -17,6 +23,10 @@ export const RsvpProvider = ({ children }) => {
   useEffect(() => {
     localStorage.setItem('cp_events', JSON.stringify(events));
   }, [events]);
+
+  useEffect(() => {
+    localStorage.setItem('cp_venues', JSON.stringify(venues));
+  }, [venues]);
 
   useEffect(() => {
     localStorage.setItem('cp_user_rsvps', JSON.stringify(userRsvps));
@@ -52,7 +62,6 @@ export const RsvpProvider = ({ children }) => {
       })
     );
 
-    // Set user RSVP details
     setUserRsvps((prev) => ({
       ...prev,
       [eventId]: {
@@ -90,15 +99,38 @@ export const RsvpProvider = ({ children }) => {
     setEvents((prev) => [eventWithDefaults, ...prev]);
   };
 
+  const deleteEvent = (eventId) => {
+    setEvents((prev) => prev.filter(e => e.id !== eventId));
+  };
+
+  const addVenue = (newVenue) => {
+    setVenues((prev) => [newVenue, ...prev]);
+  };
+
+  const updateVenue = (updatedVenue) => {
+    setVenues((prev) => prev.map(v => v.id === updatedVenue.id ? updatedVenue : v));
+  };
+
+  const deleteVenue = (venueId) => {
+    setVenues((prev) => prev.filter(v => v.id !== venueId));
+  };
+
   const clearAllLocalData = () => {
     localStorage.removeItem('cp_events');
+    localStorage.removeItem('cp_venues');
     localStorage.removeItem('cp_user_rsvps');
     setEvents(initialEvents);
+    setVenues(initialVenues);
     setUserRsvps({});
   };
 
   return (
-    <RsvpContext.Provider value={{ events, userRsvps, submitRsvp, addEvent, clearAllLocalData }}>
+    <RsvpContext.Provider value={{ 
+      events, venues, userRsvps, 
+      submitRsvp, addEvent, deleteEvent, 
+      addVenue, updateVenue, deleteVenue, 
+      clearAllLocalData 
+    }}>
       {children}
     </RsvpContext.Provider>
   );
